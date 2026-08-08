@@ -75,4 +75,33 @@ tensorboard --logdir logs/tensorboard
 
 ## 实验记录
 
-（待补充：两种方法的训练曲线、测试集准确率与对比分析）
+两套实验均已在 NVIDIA RTX 5060（CUDA 12.8，PyTorch 2.7.0）上完成，
+统一设置：batch_size=128、优化器 Adam、学习率 lr=1e-3、损失函数 CrossEntropyLoss。
+
+| 指标 | 方法一 SimpleCNN | 方法二 ResNet18 |
+| --- | --- | --- |
+| 训练轮数 | 30 | 15 |
+| 验证集最高准确率 | 80.50% | 91.52% |
+| 测试集准确率 | 81.51% | 91.35% |
+| 测试集损失 | 0.5332 | 0.2786 |
+| 宏平均 F1 | 0.8168 | 0.9132 |
+
+训练/验证损失与准确率曲线：
+
+![方法一 SimpleCNN 训练曲线](figures/cnn_curves.png)
+
+![方法二 ResNet18 训练曲线](figures/resnet_curves.png)
+
+测试集混淆矩阵：
+
+![方法一 SimpleCNN 混淆矩阵](figures/cnn_confusion_matrix.png)
+
+![方法二 ResNet18 混淆矩阵](figures/resnet_confusion_matrix.png)
+
+**对比结论**：ResNet18 迁移学习比从零训练的 CNN 高约 9.8 个百分点，且只用了
+一半的训练轮数。原因是预训练权重已经在 ImageNet 上学到了边缘、纹理、形状等
+通用视觉特征，迁移到 CIFAR-10 后只需少量微调；而 CNN 所有参数都从随机初始化
+开始学习，收敛慢、最终精度低。这说明在数据量有限的任务中，迁移学习优势明显。
+
+详细实验过程与分析见 [实验报告_CIFAR10图像分类.pdf](实验报告_CIFAR10图像分类.pdf)
+（Word 版：实验报告_CIFAR10图像分类.docx）。
