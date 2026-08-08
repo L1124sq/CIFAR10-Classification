@@ -8,17 +8,18 @@
 ## 环境
 
 - Python 3.11（建议使用 conda 环境 `cifar`）
-- PyTorch 2.6.0（CUDA 12.4）+ torchvision 0.21.0
+- PyTorch 2.7.0（CUDA 12.8）+ torchvision 0.22.0
 
 ```bash
 conda activate cifar
 pip install -r requirements.txt
 ```
 
-> Windows 上 pip 默认安装的是 CPU 版 PyTorch，如需 CUDA 版本请用官方源安装：
+> Windows 上 pip 默认安装的是 CPU 版 PyTorch，如需 CUDA 版本请用官方源安装。
+> RTX 50 系列显卡（Blackwell）必须使用 CUDA 12.8+ 的版本：
 >
 > ```bash
-> pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
+> pip install torch==2.7.0 torchvision==0.22.0 --index-url https://download.pytorch.org/whl/cu128
 > ```
 
 ## 项目结构

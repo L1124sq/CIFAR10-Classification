@@ -14,6 +14,9 @@ data/
 checkpoints/
 logs/
 
+# 本地生成脚本与中间文件
+tmp/
+
 # 系统文件
 .DS_Store
 Thumbs.db

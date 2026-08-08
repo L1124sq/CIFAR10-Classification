@@ -1,10 +1,10 @@
 # CIFAR-10 分类项目依赖
 # 建议在 conda 环境 cifar 中安装：pip install -r requirements.txt
-# Windows 上如需 CUDA 版 torch，请使用：
-#   pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
+# RTX 50 系列显卡（Blackwell）需要 CUDA 12.8+ 的 torch，请使用：
+#   pip install torch==2.7.0 torchvision==0.22.0 --index-url https://download.pytorch.org/whl/cu128
 
-torch==2.6.0
-torchvision==0.21.0
+torch==2.7.0
+torchvision==0.22.0
 numpy==2.4.4
 pandas==3.0.5
 matplotlib==3.11.1
