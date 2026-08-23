@@ -27,7 +27,7 @@ CIFAR10_MEAN = (0.4914, 0.4822, 0.4465)
 CIFAR10_STD = (0.2470, 0.2435, 0.2616)
 
 
-def get_cifar10_dataloader(batch_size, data_root):
+def get_cifar10_dataloader(batch_size, data_root, use_cutout=False):
     """
     返回 CIFAR-10 的训练集 DataLoader 和测试集 DataLoader。
 
@@ -66,6 +66,18 @@ def get_cifar10_dataloader(batch_size, data_root):
         #    让模型训练更稳定、收敛更快（理由见文件开头的注释）。
         transforms.Normalize(CIFAR10_MEAN, CIFAR10_STD),
     ])
+
+    # 可选：RandomErasing 本质上就是 Cutout，随机遮掉图片中的一块矩形区域。
+    # 它强迫模型不能只依赖某个最显眼的局部区域，从而提升泛化能力。
+    if use_cutout:
+        transform_train.transforms.append(
+            transforms.RandomErasing(
+                p=0.5,
+                scale=(0.02, 0.1),
+                ratio=(0.3, 3.3),
+                value=0.0,
+            )
+        )
 
     # ---------------- 测试集预处理 ----------------
     # 测试集只做"必要"的转换：转张量 + 标准化。
