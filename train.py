@@ -63,6 +63,7 @@ def parse_args():
     parser.add_argument("--epochs", type=int, default=30, help="训练多少轮")
     parser.add_argument("--batch_size", type=int, default=128, help="每批多少张图")
     parser.add_argument("--accum_steps", type=int, default=1, help="梯度累积步数")
+    parser.add_argument("--use_amp", action="store_true", help="使用混合精度训练（AMP）")
     parser.add_argument("--lr", type=float, default=1e-3, help="学习率")
     parser.add_argument("--val_ratio", type=float, default=0.1, help="验证集比例")
     parser.add_argument("--data_root", type=str, default="./data", help="数据目录")
@@ -158,6 +159,11 @@ def main():
     total_params, trainable_params = count_parameters(model)
     print(f"模型 {args.model}: 总参数 {total_params:,}，可训练参数 {trainable_params:,}")
 
+    use_amp = args.use_amp and device.type == "cuda"
+    scaler = torch.amp.GradScaler("cuda", enabled=use_amp) if use_amp else None
+    if use_amp:
+        print("已启用混合精度训练（AMP）。")
+
     # ================= 3. 输出目录 =================
     tag, checkpoint_path, curve_path, tensorboard_dir, metrics_json_path = build_paths(args)
     os.makedirs("checkpoints", exist_ok=True)
@@ -188,13 +194,23 @@ def main():
             last_batch_idx = batch_idx
             images, labels = images.to(device), labels.to(device)
 
-            outputs = model(images)
-            loss = criterion(outputs, labels) / args.accum_steps
-            loss.backward()
+            with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=use_amp):
+                outputs = model(images)
+                loss = criterion(outputs, labels) / args.accum_steps
+
+            if scaler is not None:
+                scaler.scale(loss).backward()
+            else:
+                loss.backward()
 
             if (batch_idx + 1) % args.accum_steps == 0:
-                optimizer.step()
-                optimizer.zero_grad()
+                if scaler is not None:
+                    scaler.step(optimizer)
+                    scaler.update()
+                    optimizer.zero_grad()
+                else:
+                    optimizer.step()
+                    optimizer.zero_grad()
 
             # loss 被 accum_steps 缩放，这里恢复成原始平均损失
             batch_loss = loss.item() * args.accum_steps
@@ -205,8 +221,13 @@ def main():
 
         # 处理最后一个不足 accum_steps 的尾部 batch
         if (last_batch_idx + 1) % args.accum_steps != 0:
-            optimizer.step()
-            optimizer.zero_grad()
+            if scaler is not None:
+                scaler.step(optimizer)
+                scaler.update()
+                optimizer.zero_grad()
+            else:
+                optimizer.step()
+                optimizer.zero_grad()
 
         train_loss = running_loss / total
         train_acc = correct / total
@@ -298,6 +319,8 @@ def main():
         "epochs": args.epochs,
         "batch_size": args.batch_size,
         "accum_steps": args.accum_steps,
+        "effective_batch_size": args.batch_size * args.accum_steps,
+        "use_amp": args.use_amp,
         "lr": args.lr,
         "weight_decay": args.weight_decay,
         "dropout": args.dropout,
