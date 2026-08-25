@@ -102,3 +102,70 @@ tensorboard --logdir logs/tensorboard
 一半的训练轮数。原因是预训练权重已经在 ImageNet 上学到了边缘、纹理、形状等
 通用视觉特征，迁移到 CIFAR-10 后只需少量微调；而 CNN 所有参数都从随机初始化
 开始学习，收敛慢、最终精度低。这说明在数据量有限的任务中，迁移学习优势明显。
+## 补充实验：正则化与骨干网络对比
+
+在原始实验基础上，进一步围绕两个问题做验证：
+
+1. 如何用正则化缩小训练集与验证集之间的泛化差距；
+2. 在相同训练设置下，参数量越大结果是否一定越好。
+
+### 正则化实验
+
+正则化实验以 ResNet18 为主，比较以下方法：
+
+- Weight decay（`--weight_decay 5e-4`）
+- Dropout（`--dropout 0.2`）
+- Label smoothing（`--label_smoothing 0.1`）
+- Cutout / RandomErasing（`--use_cutout`）
+- 组合正则化：`weight_decay=5e-4 + dropout=0.2 + label_smoothing=0.1`
+
+主要结果：
+
+| 模型与方法 | 最好验证 acc | 测试 acc | 最终 gap |
+| --- | ---: | ---: | ---: |
+| ResNet18 Baseline | 91.32% | 90.94% | 5.36% |
+| ResNet18 + 组合正则化 | 91.98% | 91.96% | 4.19% |
+| SimpleCNN Baseline | 80.42% | 81.45% | 4.43% |
+| SimpleCNN + 组合正则化 | 80.92% | 82.25% | 2.26% |
+
+正则化前后 ResNet18 的 loss 曲线对比：
+
+![正则化前后 loss 曲线对比](figures/supplement_loss_curve_comparison.png)
+
+### ResNet 骨干网络对比
+
+在相同设置下比较 ResNet18/34/50/101/152，统一训练 15 轮、lr=1e-3、
+等效 batch size=128。为降低显存压力，采用 batch_size=64、梯度累积 2 步，
+并启用 AMP 混合精度。
+
+无正则化结果：
+
+| 骨干网络 | 参数量 | 测试 acc | 最终 gap |
+| --- | ---: | ---: | ---: |
+| ResNet18 | 11.17M | 90.94% | 5.36% |
+| ResNet34 | 21.28M | 90.95% | 4.94% |
+| ResNet50 | 23.52M | 91.50% | 4.39% |
+| ResNet101 | 42.51M | 90.42% | 4.35% |
+| ResNet152 | 58.16M | 90.29% | 4.44% |
+
+最佳正则化组合下结果：
+
+| 骨干网络 | 参数量 | 测试 acc | 最终 gap |
+| --- | ---: | ---: | ---: |
+| ResNet18 | 11.17M | 91.96% | 4.19% |
+| ResNet34 | 21.28M | 91.79% | 4.45% |
+| ResNet50 | 23.52M | 91.26% | 4.50% |
+| ResNet101 | 42.51M | 91.67% | 4.23% |
+| ResNet152 | 58.16M | 91.09% | 3.91% |
+
+参数量、测试准确率与最终 gap 的关系：
+
+![参数量与准确率/gap 关系](figures/supplement_param_acc_gap.png)
+
+各骨干网络测试准确率对比：
+
+![骨干网络测试准确率对比](figures/supplement_backbone_test_acc_bar.png)
+
+结论：正则化能有效缩小泛化差距；参数量越大不一定带来更好的泛化结果。
+在 CIFAR-10 上，ResNet50 的无正则化测试准确率最高，更深的 ResNet101/152
+因过拟合和固定轮数下微调不充分反而下降。

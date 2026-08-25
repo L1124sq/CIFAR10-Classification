@@ -13,6 +13,7 @@ venv/
 data/
 checkpoints/
 logs/
+results/
 
 # 本地生成脚本与中间文件
 tmp/
